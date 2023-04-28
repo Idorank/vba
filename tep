@@ -1,0 +1,60 @@
+Sub costAllocation()
+    Dim ws1 As Worksheet, ws2 As Worksheet, ws3 As Worksheet
+    Dim rng1 As Range, rng2 As Range, rng3 As Range
+    Dim dict As Object, key As Variant
+    Dim resurs As String, enhet As String, objekt As String
+    Dim totalCost As Double, totalPercent As Double, totalAdjustment As Double
+    
+    'set worksheet variables
+    Set ws1 = ThisWorkbook.Worksheets("ws1")
+    Set ws2 = ThisWorkbook.Worksheets("ws2")
+    Set ws3 = ThisWorkbook.Worksheets("ws3")
+    
+    'set range variables
+    Set rng1 = ws1.Range("A2:D" & ws1.Range("A" & ws1.Rows.Count).End(xlUp).Row)
+    Set rng2 = ws2.Range("A2:D" & ws2.Range("A" & ws2.Rows.Count).End(xlUp).Row)
+    
+    'initialize dictionary
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    'loop through table 1 and add up total cost per combination of resurs, enhet, and objekt
+    For Each cell In rng1
+        resurs = cell.Value
+        enhet = cell.Offset(0, 1).Value
+        objekt = cell.Offset(0, 2).Value
+        If Not dict.Exists(resurs & enhet & objekt) Then
+            dict.Add resurs & enhet & objekt, cell.Offset(0, 3).Value
+        Else
+            dict.Item(resurs & enhet & objekt) = dict.Item(resurs & enhet & objekt) + cell.Offset(0, 3).Value
+        End If
+    Next cell
+    
+    'loop through table 2 and calculate total percent per combination of resurs, enhet, and objekt
+    For Each cell In rng2
+        resurs = cell.Value
+        enhet = cell.Offset(0, 1).Value
+        objekt = cell.Offset(0, 2).Value
+        totalPercent = totalPercent + cell.Offset(0, 3).Value
+        If Not dict.Exists(resurs & enhet & objekt) Then
+            dict.Add resurs & enhet & objekt, 0
+        End If
+    Next cell
+    
+    'loop through dictionary and calculate adjustment table
+    Set rng3 = ws3.Range("A1:C" & dict.Count)
+    For Each key In dict
+        resurs = Left(key, 6)
+        enhet = Mid(key, 7, 2)
+        objekt = Right(key, 4)
+        totalCost = dict(key)
+        If totalPercent <> 0 Then
+            totalAdjustment = totalCost * totalPercent / 100 - totalCost
+        Else
+            totalAdjustment = 0
+        End If
+        If totalAdjustment < 0 Then
+            rng3.Value = Array(resurs, enhet, objekt, totalAdjustment)
+            Set rng3 = rng3.Offset(1, 0)
+        End If
+    Next key
+End Sub
